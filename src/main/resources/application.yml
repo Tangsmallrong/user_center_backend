@@ -1,0 +1,14 @@
+spring:
+  application:
+    name: user-center
+
+  datasource:
+    driver-class-name: com.mysql.jdbc.Driver
+    url: jdbc:mysql://localhost:3306/thr
+    username: root
+    password: thr
+
+server:
+  port: 8080
+
+
