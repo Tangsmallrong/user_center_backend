@@ -23,9 +23,10 @@ public class SampleTest {
         System.out.println(("----- selectAll method test ------"));
         // 查询所有
         List<User> userList = userMapper.selectList(null);
-        // 断言=我觉得, 不是这样就报错
+        // 断言=我觉得, 如果不是这样就报错
         // 这里判断查出来的是否有五条数据
         Assert.assertEquals(5, userList.size());
+//        Assertions.assertEquals(5, userList.size());
         userList.forEach(System.out::println);
     }
 }
