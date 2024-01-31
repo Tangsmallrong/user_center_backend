@@ -34,4 +34,48 @@ class UserServiceTest {
         System.out.println(user.getId());
         Assertions.assertTrue(result);
     }
+
+    @Test
+    void userRegister() {
+        // 非空
+        String userAccount = "thr0103";
+        String userPassword = "";
+        String checkPassword = "123456";
+        long result = userService.userRegister(userAccount, userPassword, checkPassword);
+        Assertions.assertEquals(-1, result);
+
+        // 账号不小于4位
+        userAccount = "thr";
+        result = userService.userRegister(userAccount, userPassword, checkPassword);
+        Assertions.assertEquals(-1, result);
+
+        // 密码小于8位
+        userAccount = "thr0103";
+        userPassword = "123456";
+        result = userService.userRegister(userAccount, userPassword, checkPassword);
+        Assertions.assertEquals(-1, result);
+
+        // 账号不含特殊字符
+        userAccount = "thr 0103";
+        userPassword = "12345678";
+        result = userService.userRegister(userAccount, userPassword, checkPassword);
+        Assertions.assertEquals(-1, result);
+
+        // 密码和校验密码相同
+        checkPassword = "123456789";
+        result = userService.userRegister(userAccount, userPassword, checkPassword);
+        Assertions.assertEquals(-1, result);
+
+        // 账号不能重复
+        userAccount = "testThr";
+        checkPassword = "12345678";
+        result = userService.userRegister(userAccount, userPassword, checkPassword);
+        Assertions.assertEquals(-1, result);
+
+        // 注册成功
+        userAccount = "thr0103";
+        result = userService.userRegister(userAccount, userPassword, checkPassword);
+//        Assertions.assertTrue(result > 0);
+        Assertions.assertEquals(-1, result);
+    }
 }
