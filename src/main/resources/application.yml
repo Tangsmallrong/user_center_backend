@@ -6,7 +6,10 @@ spring:
     driver-class-name: com.mysql.jdbc.Driver
     url: jdbc:mysql://localhost:3306/thr
     username: root
-    password: thr
+    password: xxx
+  # session 失效时间
+  session:
+    timeout: 86400
 
 server:
   port: 8080
