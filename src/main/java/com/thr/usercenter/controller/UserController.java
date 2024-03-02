@@ -44,11 +44,12 @@ public class UserController {
         String userAccount = userRegisterRequest.getUserAccount();
         String userPassword = userRegisterRequest.getUserPassword();
         String checkPassword = userRegisterRequest.getCheckPassword();
-        if (StringUtils.isAnyBlank(userAccount, userPassword, checkPassword)) {
+        String planetCode = userRegisterRequest.getPlanetCode();
+        if (StringUtils.isAnyBlank(userAccount, userPassword, checkPassword, planetCode)) {
             return null;
         }
 
-        return userService.userRegister(userAccount, userPassword, checkPassword);
+        return userService.userRegister(userAccount, userPassword, checkPassword, planetCode);
     }
 
     /**
@@ -74,6 +75,43 @@ public class UserController {
     }
 
     /**
+     * 用户注销
+     * @param request 请求对象
+     * @return 注销结果标识
+     */
+    @PostMapping("/logout")
+    public Integer userLogout(HttpServletRequest request) {
+        if (request == null) {
+            return null;
+        }
+
+        return userService.userLogout(request);
+    }
+
+    /**
+     * 获取当前登录的用户信息
+     *
+     * @param request 请求
+     * @return 用户对象
+     */
+    @GetMapping("/current")
+    public User getCurrentUser(HttpServletRequest request) {
+        // 从 session 中拿到用户的登录态, 返回用户信息
+        Object userObj = request.getSession().getAttribute(USER_LOGIN_STATE);
+        User currentUser = (User) userObj;
+        if (currentUser == null) {
+            return null;
+        }
+
+        // 对于信息频繁变换的系统(如积分), 可以通过再去查一次数据库后返回用户信息(推荐)
+        long userId = currentUser.getId();
+        // todo 校验用户是否合法(封号?)
+        User user = userService.getById(userId);
+        return userService.getSafetyUser(user);  // 脱敏
+    }
+
+
+    /**
      * 根据用户名查询用户(仅管理员可查询)
      *
      * @param username 用户名
@@ -87,6 +125,8 @@ public class UserController {
             return new ArrayList<>();
         }
 
+        // 如果 username 为空, QueryWrapper 不包含任何条件时
+        // 相当于执行了一个不带 WHERE 子句的 SELECT 查询, 它会检索目标表中的所有行
         QueryWrapper<User> queryWrapper = new QueryWrapper<>();
         if (StringUtils.isNoneBlank(username)) {
             queryWrapper.like("username", username);
