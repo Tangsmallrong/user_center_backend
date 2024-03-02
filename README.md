@@ -130,4 +130,66 @@ spring:
 request.getSession().removeAttribute(USER_LOGIN_STATE);
 ```
 
+# 7. 后端代码优化
+
+## 7.1 通用返回对象
+
+创建 common 包，包下: 
+
+- 新建通用的响应封装类 `BaseResponse<T>` ，用于构造API的返回对象，提供统一的响应格式
+
+- 新建工具类 `ResultUtils`，提供了一系列静态方法来快速创建 `BaseResponse` 对象
+  - 分别用于构造成功或失败的响应，简化在业务逻辑中生成通用响应对象的过程
+
+- 新建 `ErrorCode` 枚举类，自定义状态码及其对应的消息和描述
+
+```java
+SUCCESS(0, "ok", ""),
+PARAMS_ERROR(40000, "请求参数错误", ""),
+PARAMS_NULL_ERROR(40001, "请求数据为空", ""),
+NO_LOGIN(40100, "未登录", ""),
+NO_AUTH(40101, "无权限", ""),
+USER_SAVE_ERROR(40200, "用户保存错误", ""),
+SYSTEM_ERROR(50000, "系统内部异常", "");
+```
+
+> `BaseResponse`提供了通用的响应结构
+> 
+> `ResultUtils`简化了响应对象的创建过程
+> 
+> `ErrorCode`则为错误情况提供了标准化的表示方法
+
+## 7.2 封装全局异常处理
+
+创建 exception 包, 包下:
+  
+- **定义业务异常类**: `BusinessException` 继承 `RuntimeException`
+
+  - 相对于 java 的异常类，支持更多字段
+    
+  - 自定义构造函数，更灵活/快捷的设置字段
+  
+```java
+public BusinessException(ErrorCode errorCode) {
+    super(errorCode.getMessage());
+    this.code = errorCode.getCode();
+    this.description = errorCode.getDescription();
+}
+```
+  
+- **编写全局异常处理器**：使用 Spring AOP 在调用方法前后进行额外的处理
+  
+  - 捕获代码中所有的异常，内部消化，集中处理，让前端得到更详细的业务报错/信息
+    
+  - 同时屏蔽掉项目框架本身的异常（不暴露服务器内部状态）
+  
+```java
+@ExceptionHandler(BusinessException.class) // 针对自定义异常
+public BaseResponse businessExceptionHandler(BusinessException e) {
+    log.error("businessException" + e.getMessage(), e);
+    return ResultUtils.error(e.getCode(), e.getMessage(), e.getDescription());
+}
+```
+  
+- **全局请求日志和登录校验**(todo)
 

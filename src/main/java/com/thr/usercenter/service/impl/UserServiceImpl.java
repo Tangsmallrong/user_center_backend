@@ -2,6 +2,8 @@ package com.thr.usercenter.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.thr.usercenter.common.ErrorCode;
+import com.thr.usercenter.exception.BusinessException;
 import com.thr.usercenter.mapper.UserMapper;
 import com.thr.usercenter.model.domain.User;
 import com.thr.usercenter.service.UserService;
@@ -40,26 +42,26 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
     public long userRegister(String userAccount, String userPassword, String checkPassword, String planetCode) {
         // 1. 校验, 使用 apache.commons 库
         if (StringUtils.isAnyBlank(userAccount, userPassword, checkPassword, planetCode)) {
-            return -1;
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "参数为空");
         }
 
         if (userAccount.length() < 4) {
-            return -1;
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "用户账号过短");
         }
 
         if (userPassword.length() < 8 || checkPassword.length() < 8) {
-            return -1;
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "用户密码过短");
         }
 
         if (planetCode.length() > 5) {
-            return -1;
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "用户编号过长");
         }
 
         // 账户不能包含特殊字符, 正则表达式
         String validPattern = "[`~!@#$%^&*()+=|{}':;',\\\\[\\\\].<>/?~！@#￥%……&*（）——+|{}【】‘；：”“’。，、？]";
         Matcher matcher = Pattern.compile(validPattern).matcher(userAccount);
         if (matcher.find()) {  // 如果找到特殊字符?
-            return -1;
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "账号不能包含特殊字符");
         }
 
         // 账户不能重复, 查数据库是否有相同账户的用户
@@ -67,7 +69,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         queryWrapper.eq("userAccount", userAccount);
         long count = userMapper.selectCount(queryWrapper);
         if (count > 0) {
-            return -1;
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "账号不能重复");
         }
 
         // 用户编号不能重复, 查数据库是否有相同账户的用户
@@ -75,12 +77,12 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         queryWrapper.eq("planetCode", planetCode);
         count = userMapper.selectCount(queryWrapper);
         if (count > 0) {
-            return -1;
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "用户编号不能重复");
         }
 
         // 密码和校验密码相同
         if (!userPassword.equals(checkPassword)) {
-            return -1;
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "密码和校验密码不同");
         }
 
         // 2. 加密, md5 加密
@@ -93,7 +95,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         user.setPlanetCode(planetCode);
         boolean saveResult = this.save(user);
         if (!saveResult) {
-            return -1;
+            throw new BusinessException(ErrorCode.USER_SAVE_ERROR, "保存新用户失败");
         }
         return user.getId();
     }
@@ -102,23 +104,22 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
     public User userLogin(String userAccount, String userPassword, HttpServletRequest request) {
         // 1. 校验, 使用 apache.commons 库
         if (StringUtils.isAnyBlank(userAccount, userPassword)) {
-            // todo 修改为自定义异常
-            return null;
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "用户账号密码不能为空");
         }
 
         if (userAccount.length() < 4) {
-            return null;
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "用户账号过短");
         }
 
         if (userPassword.length() < 8) {
-            return null;
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "用户密码过长");
         }
 
         // 账户不能包含特殊字符, 正则表达式
         String validPattern = "[`~!@#$%^&*()+=|{}':;',\\\\[\\\\].<>/?~！@#￥%……&*（）——+|{}【】‘；：”“’。，、？]";
         Matcher matcher = Pattern.compile(validPattern).matcher(userAccount);
         if (matcher.find()) {  // 如果找到特殊字符?
-            return null;
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "账号不能包含特殊字符");
         }
 
         // 2. 加密, md5 加密
@@ -132,7 +133,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         // 用户不存在或密码错误
         if (user == null) {  // 两种情况, 要么用户不存在, 要么密码错了
             log.info("user login failed, userAccount cannot match userPassword");
-            return null;
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "用户不存在或密码错误");
         }
 
         // 3. 用户脱敏, 密码不返回

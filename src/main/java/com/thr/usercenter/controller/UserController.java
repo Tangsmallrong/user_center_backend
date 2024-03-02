@@ -1,6 +1,10 @@
 package com.thr.usercenter.controller;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.thr.usercenter.common.BaseResponse;
+import com.thr.usercenter.common.ErrorCode;
+import com.thr.usercenter.common.ResultUtils;
+import com.thr.usercenter.exception.BusinessException;
 import com.thr.usercenter.model.domain.User;
 import com.thr.usercenter.model.domain.request.UserLoginRequest;
 import com.thr.usercenter.model.domain.request.UserRegisterRequest;
@@ -10,7 +14,6 @@ import org.springframework.web.bind.annotation.*;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -36,9 +39,10 @@ public class UserController {
      * @return 注册结果
      */
     @PostMapping("/register")
-    public Long userRegister(@RequestBody UserRegisterRequest userRegisterRequest) {
+    public BaseResponse<Long> userRegister(@RequestBody UserRegisterRequest userRegisterRequest) {
         if (userRegisterRequest == null) {
-            return null;
+//            return ResultUtils.error(ErrorCode.PARAMS_ERROR);
+            throw new BusinessException(ErrorCode.PARAMS_ERROR);
         }
 
         String userAccount = userRegisterRequest.getUserAccount();
@@ -46,10 +50,11 @@ public class UserController {
         String checkPassword = userRegisterRequest.getCheckPassword();
         String planetCode = userRegisterRequest.getPlanetCode();
         if (StringUtils.isAnyBlank(userAccount, userPassword, checkPassword, planetCode)) {
-            return null;
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "参数为空");
         }
 
-        return userService.userRegister(userAccount, userPassword, checkPassword, planetCode);
+        long result = userService.userRegister(userAccount, userPassword, checkPassword, planetCode);
+        return ResultUtils.success(result);
     }
 
     /**
@@ -60,32 +65,35 @@ public class UserController {
      * @return 登录结果
      */
     @PostMapping("/login")
-    public User userLogin(@RequestBody UserLoginRequest userLoginRequest, HttpServletRequest request) {
+    public BaseResponse<User> userLogin(@RequestBody UserLoginRequest userLoginRequest, HttpServletRequest request) {
         if (userLoginRequest == null) {
-            return null;
+            throw new BusinessException(ErrorCode.PARAMS_ERROR);
         }
 
         String userAccount = userLoginRequest.getUserAccount();
         String userPassword = userLoginRequest.getUserPassword();
         if (StringUtils.isAnyBlank(userAccount, userPassword)) {
-            return null;
+            throw new BusinessException(ErrorCode.PARAMS_ERROR);
         }
 
-        return userService.userLogin(userAccount, userPassword, request);
+        User user = userService.userLogin(userAccount, userPassword, request);
+        return ResultUtils.success(user);
     }
 
     /**
      * 用户注销
+     *
      * @param request 请求对象
      * @return 注销结果标识
      */
     @PostMapping("/logout")
-    public Integer userLogout(HttpServletRequest request) {
+    public BaseResponse<Integer> userLogout(HttpServletRequest request) {
         if (request == null) {
-            return null;
+            throw new BusinessException(ErrorCode.PARAMS_ERROR);
         }
 
-        return userService.userLogout(request);
+        int result = userService.userLogout(request);
+        return ResultUtils.success(result);
     }
 
     /**
@@ -95,19 +103,20 @@ public class UserController {
      * @return 用户对象
      */
     @GetMapping("/current")
-    public User getCurrentUser(HttpServletRequest request) {
+    public BaseResponse<User> getCurrentUser(HttpServletRequest request) {
         // 从 session 中拿到用户的登录态, 返回用户信息
         Object userObj = request.getSession().getAttribute(USER_LOGIN_STATE);
         User currentUser = (User) userObj;
         if (currentUser == null) {
-            return null;
+            throw new BusinessException(ErrorCode.NO_LOGIN);
         }
 
         // 对于信息频繁变换的系统(如积分), 可以通过再去查一次数据库后返回用户信息(推荐)
         long userId = currentUser.getId();
         // todo 校验用户是否合法(封号?)
         User user = userService.getById(userId);
-        return userService.getSafetyUser(user);  // 脱敏
+        User safetyUser = userService.getSafetyUser(user);  // 脱敏
+        return ResultUtils.success(safetyUser);
     }
 
 
@@ -119,10 +128,10 @@ public class UserController {
      * @return 返回查询结果列表
      */
     @GetMapping("/search")
-    public List<User> searchUsers(String username, HttpServletRequest request) {
+    public BaseResponse<List<User>> searchUsers(String username, HttpServletRequest request) {
         // 如果不是管理员
         if (!isAdmin(request)) {
-            return new ArrayList<>();
+            throw new BusinessException(ErrorCode.NO_AUTH);
         }
 
         // 如果 username 为空, QueryWrapper 不包含任何条件时
@@ -133,7 +142,8 @@ public class UserController {
         }
 
         List<User> userList = userService.list(queryWrapper);
-        return userList.stream().map(user -> userService.getSafetyUser(user)).collect(Collectors.toList());
+        List<User> list = userList.stream().map(user -> userService.getSafetyUser(user)).collect(Collectors.toList());
+        return ResultUtils.success(list);
     }
 
     /**
@@ -144,17 +154,17 @@ public class UserController {
      * @return 是否删除成功
      */
     @PostMapping("/delete")
-    public boolean deleteUsers(@RequestBody long id, HttpServletRequest request) {
+    public BaseResponse<Boolean> deleteUsers(@RequestBody long id, HttpServletRequest request) {
         // 如果不是管理员
         if (!isAdmin(request)) {
-            return false;
+            throw new BusinessException(ErrorCode.NO_AUTH);
         }
 
         if (id <= 0) {
-            return false;
+            throw new BusinessException(ErrorCode.PARAMS_ERROR);
         }
-
-        return userService.removeById(id);
+        boolean b = userService.removeById(id);
+        return ResultUtils.success(b);
     }
 
     /**
