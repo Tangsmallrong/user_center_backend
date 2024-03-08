@@ -27,6 +27,7 @@ import static com.thr.usercenter.constant.UserConstant.USER_LOGIN_STATE;
  */
 @RestController
 @RequestMapping("/user")
+//@CrossOrigin(origins = {"http://user.tang0103.com"}, allowCredentials = "true")
 public class UserController {
 
     @Resource

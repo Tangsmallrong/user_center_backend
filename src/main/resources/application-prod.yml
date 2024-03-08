@@ -1,0 +1,12 @@
+spring:
+  datasource:
+    driver-class-name: com.mysql.jdbc.Driver
+    url: jdbc:mysql://xx.xx.xx.xx:3306/xxxx?useSSL=false
+    username: xx
+    password: xxx
+  # session 失效时间
+  session:
+    timeout: 86400
+
+server:
+  address: 0.0.0.0

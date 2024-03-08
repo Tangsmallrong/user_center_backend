@@ -28,20 +28,27 @@
 
 - **用户表**：
 
-    - id(主键)  bigint
-    - username 呢称 varchar
-    - userAccount 登录账号 varchar
-    - userPassword 密码 varchar
-    - avatarUrl 头像 varchar
-    - gender 性别 tinyint
-    - phone 电话 varchar
-    - email 邮箱 varchar
-    - userStatus 用户状态(是否封号，会员过期等等) int 0-正常
-    - userRole 用户角色 0 - 普通用户 1 - 管理员
-    - planetCode 用户编号 varchar
-    - **createTime 创建时间(数据插入时间)** datetime
-    - **updateTime 更新时间(数据更新时间)** datetime
-    - **isDelete 是否删除(0 1逻辑删除)** tinyint
+```sql
+create table user
+(
+    id           bigint auto_increment comment 'id'
+        primary key,
+    username     varchar(256)                       null comment '用户昵称',
+    userAccount  varchar(256)                       null comment '账号',
+    avatarUrl    varchar(1024)                      null comment '用户头像',
+    gender       tinyint                            null comment '性别',
+    userPassword varchar(512)                       not null comment '密码',
+    phone        varchar(128)                       null comment '电话',
+    email        varchar(512)                       null comment '邮箱',
+    userStatus   int      default 0                 not null comment '状态 0 - 正常',
+    createTime   datetime default CURRENT_TIMESTAMP null comment '创建时间',
+    updateTime   datetime default CURRENT_TIMESTAMP null on update CURRENT_TIMESTAMP comment '更新时间',
+    isDelete     tinyint  default 0                 not null comment '是否删除',
+    userRole     int      default 0                 not null comment '用户角色 0 - 普通用户 1 - 管理员 ',
+    planetCode   varchar(512)                       null comment '用户编号'
+)
+    comment '用户';
+```
     
 # 4. 登录注册功能
 
@@ -192,4 +199,56 @@ public BaseResponse businessExceptionHandler(BusinessException e) {
 ```
   
 - **全局请求日志和登录校验**(todo)
+
+# 8. 部署和上线
+
+## 8.1 多环境配置
+
+- **新增生成环境配置文件**：
+  
+  - 通过 `application.yml` 添加不同的后缀来区分配置文件，复制 `application.yml`，粘贴到resources 包下，重命名为 `application-prod.yml`
+
+- **修改生产环境的配置**： 如数据库等
+
+## 8.2 项目部署
+
+- 部署方式:
+  - 原始部署
+  
+  - 宝塔 
+  
+  - 容器
+  
+  - 容器平台
+  
+> 这里选择容器部署
+
+- dockerfile 编写
+
+```dockerfile
+FROM maven:3.5-jdk-8-alpine as builder
+  
+# Copy local code to the container image.
+WORKDIR /app
+COPY pom.xml .
+COPY src ./src
+
+# Build a release artifact.
+RUN mvn package -DskipTests
+
+# Run the web service on container startup.
+CMD ["java","-jar","/app/target/user_center-0.0.1-SNAPSHOT.jar","--spring.profiles.active=prod"]
+```
+
+- 用 docker 命令根据 Dockerfile 文件构建镜像：
+
+```shell
+docker build -t user-center-frontend:v0.0.1 .
+```
+
+- 启动
+
+```shell
+docker run -p 8080:8080 -d user-center-backend:v0.0.1
+```
 
